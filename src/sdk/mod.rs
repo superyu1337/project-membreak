@@ -1,6 +1,6 @@
 use dataview::Pod;
 use json::JsonValue;
-use memflow::{VirtualMemory, process, Address};
+use memflow::{VirtualMemory, Address};
 use memflow_win32::Win32Process;
 
 pub mod offsets;
@@ -33,8 +33,9 @@ pub fn get_glowobject<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: 
     process.virt_mem.virt_read_addr32(client_base + offset).expect("get_glowobject")
 }
 
-pub fn get_localid<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, local: Address) -> i32 {
-    process.virt_mem.virt_read(local + 0x64).expect("get_localid")
+pub fn get_localid<T: VirtualMemory>(process: &mut Win32Process<T>, local: Address) -> i32 {
+    let data: i32 = process.virt_mem.virt_read(local + 0x64).expect("get_localid");
+    return data - 1;
 }
 
 pub fn get_viewangles<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, client_state: Address) -> Vector3 {
@@ -97,6 +98,16 @@ pub fn get_viewoffset<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: 
     process.virt_mem.virt_read(entity_base + offset).expect("get_viewoffset")
 }
 
+pub fn get_aimpunch<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, entity_base: Address) -> Vector3 {
+    let offset = offsets::get_netvar(offsets, "m_aimPunchAngle").unwrap();
+    process.virt_mem.virt_read(entity_base + offset).expect("get_viewoffset")
+}
+
+pub fn set_spotted<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, entity_base: Address, value: bool) {
+    let offset = offsets::get_netvar(offsets, "m_bSpotted").unwrap();
+    process.virt_mem.virt_write(entity_base + offset, &(value as u8)).expect("set_spotted");
+}
+
 pub fn get_spottedmask<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, entity_base: Address) -> i32 {
     let offset = offsets::get_netvar(offsets, "m_bSpottedByMask").unwrap();
     process.virt_mem.virt_read(entity_base + offset).expect("get_spottedmask")
@@ -118,4 +129,39 @@ pub fn get_aim_angles<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: 
     let mut target_angles = math::calc_angles(local_pos, entity_pos);
     math::vector_normalise(&mut target_angles);
     return target_angles;
+}
+
+pub fn get_wep_def_index<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, client_base: Address, entity_base: Address) -> u16 {
+    let offset = offsets::get_netvar(offsets, "m_hActiveWeapon").unwrap();
+    let offset2 = offsets::get_netvar(offsets, "m_iItemDefinitionIndex").unwrap();
+
+    let weapon_handle: usize = process.virt_mem.virt_read(entity_base + offset).expect("get_wep_def_index 0");
+    let weapon_index = weapon_handle & 0xFFF;
+    let weapon_base = get_entity_by_index(process, offsets, client_base, weapon_index - 1);
+    process.virt_mem.virt_read(weapon_base + offset2).expect("get_wep_def_index 1")
+}
+
+pub fn is_valid_weapon(item_def_index: u16) -> bool {
+
+    if item_def_index > 0 && item_def_index < 20 {
+        return true;
+    }
+
+    if item_def_index > 20 && item_def_index < 37 {
+        return true;
+    }
+
+    if item_def_index > 37 && item_def_index < 41 {
+        return true;
+    }
+
+    if item_def_index == 60 && item_def_index == 61 {
+        return true;
+    }
+
+    if item_def_index == 63 && item_def_index == 64 {
+        return true;
+    }
+
+    false
 }

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub glow_enable: bool,
+    pub radar_enable: bool,
     pub aimbot_enable: bool,
     pub aimbot_fov: f32,
     pub aimbot_smoothing: f32,
