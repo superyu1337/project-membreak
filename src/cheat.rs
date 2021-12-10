@@ -27,6 +27,8 @@ pub fn setup() -> (Win32Process<VirtualDMA<CachedMemoryAccess<'static, Connector
     let client_module = modules.find(|m| m.name == "client.dll")
     .ok_or(Error::Other("Could not find the client module!")).unwrap();
 
+    let mut modules = process.module_list().unwrap().into_iter();
+
     let engine_module = modules.find(|m| m.name == "engine.dll")
     .ok_or(Error::Other("Could not find the engine module!")).unwrap();
 
