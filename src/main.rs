@@ -20,11 +20,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let config = Config { 
         aimbot_enable: true,
-        aimbot_fov: 3.5f32,
+        aimbot_fov: 4.5f32,
         aimbot_smoothing: 8f32,
         recoil_control_amount: 0f32,
         recoil_control_enable: false,
-        glow_enable: false,
+        glow_enable: true,
         radar_enable: true,
     };
 
