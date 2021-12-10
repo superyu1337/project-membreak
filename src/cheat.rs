@@ -6,14 +6,12 @@ use crate::{menu::Config, sdk};
 
 pub fn setup() -> (Win32Process<VirtualDMA<CachedMemoryAccess<'static, ConnectorInstance, TimedCacheValidator>, CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>, Win32VirtualTranslate>>, Kernel<CachedMemoryAccess<'static, ConnectorInstance, TimedCacheValidator>, CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>>, Address, Address) {
     let inventory = unsafe { ConnectorInventory::scan() };
-    /*let connector = unsafe {
+    let connector = unsafe {
         inventory.create_connector(
             "qemu_procfs", 
             &ConnectorArgs::default()
         )
-    }.unwrap();*/
-    let connector = unsafe { inventory.create_connector_default("qemu_procfs")? };
-
+    }.unwrap();
 
     let mut kernel = Kernel::builder(connector)
         .build_default_caches()
