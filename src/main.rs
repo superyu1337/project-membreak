@@ -9,7 +9,6 @@ pub mod menu;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let offsets = sdk::offsets::get_offsets();
-    println!("test oder sowas");
 
     let (mut process,
         mut kernel, 
