@@ -33,11 +33,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut config = unsafe { CONFIG.clone() };
 
     println!("Cheat setup successful!");
-    println!("Starting loop now...");
+    println!("Setting up some things...");
 
     let (tx, rx) = std::sync::mpsc::channel();
 
     let menu_thread = thread::spawn(move || {
+	thread::sleep(std::time::Duration::from_millis(1000));
         enable_raw_mode().unwrap();
         loop {
             let result = handle_menu(&mut config).unwrap();
