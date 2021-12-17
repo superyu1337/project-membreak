@@ -16,6 +16,7 @@ pub struct Config {
     pub recoil_control_amount: f32
 }
 
+static mut CURRENT_TAB: i8 = 0;
 static mut CURRENT_SELECTED: i8 = 0;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -49,8 +50,37 @@ fn draw_slider(name: &str, value: &mut f32, id: &mut i8, start: f32, end: f32, s
     *id += 1;
 }
 
-pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
+pub fn draw_tab_menu(value: &mut i8, tabs: Vec<String>, id: &mut i8, input_code: usize) {
+    let mut counter: i8 = 0;
 
+    let prefix: &str = unsafe { if CURRENT_SELECTED == *id { "-> " } else { "   " } };
+    print!("{}", prefix);
+
+    if input_code == 3 && unsafe { CURRENT_SELECTED == *id } {
+        if *value + 1 <= tabs.len() as i8 - 1i8 {
+            *value += 1;
+        }
+    } else if input_code == 4 && unsafe { CURRENT_SELECTED == *id } {
+        if *value - 1 >= 0 {
+            *value -= 1;
+        }
+    }
+
+    for tab_name in tabs {
+        if counter == *value {
+            print!("[{}] ", tab_name);
+        } else {
+            print!("{} " , tab_name);
+        }
+        counter += 1;
+    }
+    print!("\n\r");
+    print!("===============================================\n\r");
+
+    *id += 1;
+}
+
+pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
     let mut id = 0;
     let mut input_code: usize = 0; 
     // 0 - nothing
@@ -71,9 +101,7 @@ pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
             match event.code {
                 KeyCode::Char('q') => { return Ok(false) }
                 KeyCode::Down => unsafe { 
-                    if CURRENT_SELECTED + 1 <= 6 {
-                        CURRENT_SELECTED += 1
-                    }
+                    CURRENT_SELECTED += 1
                 }
                 KeyCode::Up => unsafe { 
                     if CURRENT_SELECTED - 1 >= 0 {
@@ -94,18 +122,36 @@ pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
 
     print!("Project Membreak {} | made with ♡ by superyu\n\r", VERSION);
     print!("===============================================\n\r");
-    draw_checkbox("Glow", &mut config.glow_enable, &mut id, input_code);
-    draw_checkbox("Radar", &mut config.radar_enable, &mut id, input_code);
 
-    draw_checkbox("Aimbot", &mut config.aimbot_enable, &mut id, input_code);
-    draw_slider("Aimbot FOV", &mut config.aimbot_fov, &mut id, 0f32, 15f32, 0.25f32, "°", input_code);
-    draw_slider("Aimbot Smoothing", &mut config.aimbot_smoothing, &mut id, 0f32, 15f32, 0.25f32, "",input_code);
+    unsafe { 
+        draw_tab_menu(&mut CURRENT_TAB, 
+            vec!["General".to_owned(), "Skinchanger (WIP)".to_owned()], 
+            &mut id, input_code) 
+        };
 
-    draw_checkbox("Recoil Control System", &mut config.recoil_control_enable, &mut id, input_code);
-    draw_slider("Recoil Control Amount", &mut config.recoil_control_amount, &mut id, 0f32, 100f32, 5f32, "%", input_code);
+    if unsafe { CURRENT_TAB == 0 } {
+        draw_checkbox("Glow", &mut config.glow_enable, &mut id, input_code);
+        draw_checkbox("Radar", &mut config.radar_enable, &mut id, input_code);
+    
+        draw_checkbox("Aimbot", &mut config.aimbot_enable, &mut id, input_code);
+        draw_slider("Aimbot FOV", &mut config.aimbot_fov, &mut id, 0f32, 180f32, 0.25f32, "°", input_code);
+        draw_slider("Aimbot Smoothing", &mut config.aimbot_smoothing, &mut id, 0f32, 15f32, 0.25f32, "",input_code);
+    
+        draw_checkbox("Recoil Control System", &mut config.recoil_control_enable, &mut id, input_code);
+        draw_slider("Recoil Control Amount", &mut config.recoil_control_amount, &mut id, 0f32, 100f32, 5f32, "%", input_code);
+    } else {
+        print!("There is nothing to see here yet!\n\rCome back later.\n\r");
+        print!("The imposter is sus.\n\r");
+    }
     print!("==============================================\n\r");
     print!("Press q to quit.\n\r");
     print!("==============================================\n\r");
+
+    unsafe {
+        if CURRENT_SELECTED >= id {
+            CURRENT_SELECTED = id - 1;
+        }
+    }
 
     out.flush().unwrap();
 

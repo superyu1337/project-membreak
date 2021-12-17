@@ -80,5 +80,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     menu_thread.join().unwrap();
+
     Ok(())
 }
