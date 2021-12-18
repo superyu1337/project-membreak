@@ -17,6 +17,7 @@ static mut CONFIG: Config = Config {
     recoil_control_enable: false,
     glow_enable: false,
     radar_enable: false,
+    rage_mode: false,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {

@@ -13,7 +13,8 @@ pub struct Config {
     pub aimbot_fov: f32,
     pub aimbot_smoothing: f32,
     pub recoil_control_enable: bool,
-    pub recoil_control_amount: f32
+    pub recoil_control_amount: f32,
+    pub rage_mode: bool,
 }
 
 static mut CURRENT_TAB: i8 = 0;
@@ -125,7 +126,7 @@ pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
 
     unsafe { 
         draw_tab_menu(&mut CURRENT_TAB, 
-            vec!["General".to_owned(), "Skinchanger (WIP)".to_owned()], 
+            vec!["General".to_owned(), "Danger Zone".to_owned()], 
             &mut id, input_code) 
         };
 
@@ -140,8 +141,7 @@ pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
         draw_checkbox("Recoil Control System", &mut config.recoil_control_enable, &mut id, input_code);
         draw_slider("Recoil Control Amount", &mut config.recoil_control_amount, &mut id, 0f32, 100f32, 5f32, "%", input_code);
     } else {
-        print!("There is nothing to see here yet!\n\rCome back later.\n\r");
-        print!("The imposter is sus.\n\r");
+        draw_checkbox("Ragemode (No smoothing, goes thru walls)", &mut config.rage_mode, &mut id, input_code);
     }
     print!("==============================================\n\r");
     print!("Press q to quit.\n\r");
