@@ -106,7 +106,7 @@ pub unsafe fn hack_loop(
                         if config.aimbot_enable && sdk::is_valid_weapon(local_wep_def_index) {
 
                             if config.rage_mode {
-                                let aim_angles = sdk::get_aim_angles(process, &offsets, entity_base, local_base, 0);
+                                let aim_angles = sdk::get_aim_angles(process, &offsets, entity_base, local_base, 8);
                                 let yaw_diff = libm::fabsf(view_angles.y - aim_angles.y);
                                 let pitch_diff = libm::fabsf(view_angles.x - aim_angles.x);
                                 let total_diff = libm::sqrtf(pitch_diff * pitch_diff + yaw_diff * yaw_diff);
