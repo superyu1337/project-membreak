@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub glow_enable: bool,
+    pub chams_enable: bool,
+    pub chams_brightness: f32,
     pub radar_enable: bool,
     pub aimbot_enable: bool,
     pub aimbot_fov: f32,
@@ -132,6 +134,8 @@ pub fn handle_menu(config: &mut Config) -> Result<bool, Box<dyn Error>> {
 
     if unsafe { CURRENT_TAB == 0 } {
         draw_checkbox("Glow", &mut config.glow_enable, &mut id, input_code);
+        draw_checkbox("Chams", &mut config.chams_enable, &mut id, input_code);
+        draw_slider("Chams Brightness", &mut config.chams_brightness, &mut id, 0f32, 100f32, 10f32, "%", input_code);
         draw_checkbox("Radar", &mut config.radar_enable, &mut id, input_code);
     
         draw_checkbox("Aimbot", &mut config.aimbot_enable, &mut id, input_code);

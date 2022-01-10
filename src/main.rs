@@ -16,6 +16,8 @@ static mut CONFIG: Config = Config {
     recoil_control_amount: 30f32,
     recoil_control_enable: false,
     glow_enable: false,
+    chams_enable: false,
+    chams_brightness: 0f32,
     radar_enable: false,
     rage_mode: false,
 };
@@ -77,7 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        thread::sleep(std::time::Duration::from_nanos(500));
+        thread::sleep(std::time::Duration::from_nanos(5000));
     }
 
     menu_thread.join().unwrap();

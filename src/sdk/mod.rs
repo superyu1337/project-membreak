@@ -71,6 +71,11 @@ pub fn get_team<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonV
     process.virt_mem.virt_read(entity_base + offset).expect("get_team")
 }
 
+pub fn get_shots_fired<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, entity_base: Address) -> i32 {
+    let offset = offsets::get_netvar(offsets, "m_iShotsFired").unwrap();
+    process.virt_mem.virt_read(entity_base + offset).expect("get_shots_fired")
+}
+
 pub fn get_glowindex<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, entity_base: Address) -> usize {
     let offset = offsets::get_netvar(offsets, "m_iGlowIndex").unwrap();
     let data: i32 = process.virt_mem.virt_read(entity_base + offset).expect("get_glowindex");
@@ -155,11 +160,11 @@ pub fn is_valid_weapon(item_def_index: u16) -> bool {
         return true;
     }
 
-    if item_def_index == 60 && item_def_index == 61 {
+    if item_def_index == 60 || item_def_index == 61 {
         return true;
     }
 
-    if item_def_index == 63 && item_def_index == 64 {
+    if item_def_index == 63 || item_def_index == 64 {
         return true;
     }
 
