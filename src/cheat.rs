@@ -6,9 +6,6 @@ use crate::{menu::Config, sdk};
 
 static BONEIDS: [usize; 6] = [8, 6, 5, 4, 3, 0];
 
-static mut PREVIOUS_PUNCH_X: f32 = 0.0;
-static mut PREVIOUS_PUNCH_Y: f32 = 0.0;
-
 pub fn setup() -> (Win32Process<VirtualDMA<CachedMemoryAccess<'static, ConnectorInstance, TimedCacheValidator>, CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>, Win32VirtualTranslate>>, Kernel<CachedMemoryAccess<'static, ConnectorInstance, TimedCacheValidator>, CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>>, Address, Address) {
     let inventory = unsafe { ConnectorInventory::scan() };
     let connector = unsafe {
@@ -59,25 +56,6 @@ fn glow<T: VirtualMemory>(process: &mut Win32Process<T>, glow_object: Address, g
     process.virt_mem.virt_write(Address::from(glow_object + (off + 0x29)), &0u8).unwrap();
 }
 
-fn chams<T: VirtualMemory>(process: &mut Win32Process<T>, entity_base: Address, r: u8, g: u8, b: u8) {
-    process.virt_mem.virt_write(entity_base + 0x70, &r).unwrap();
-    process.virt_mem.virt_write(entity_base + 0x71, &g).unwrap();
-    process.virt_mem.virt_write(entity_base + 0x72, &b).unwrap();
-}
-
-fn chams_patch_model_ambient<T: VirtualMemory>(process: &mut Win32Process<T>, offsets: &JsonValue, engine_base: Address, brightness: f32) {
-    let offset = sdk::offsets::get_signature(offsets, "model_ambient_min").unwrap();
-    let ptr = engine_base + offset + 0x2C;
-    
-    let bytearray = brightness.to_le_bytes();
-    let casted_brightness = unsafe { std::mem::transmute::<[u8; 4], u32>(bytearray) };
-    let xored = casted_brightness ^ ptr.as_u32();
-    let bytearray = xored.to_le_bytes();
-    let final_value = unsafe { std::mem::transmute::<[u8; 4], i32>(bytearray) };
-
-    process.virt_mem.virt_write(engine_base + offset, &final_value).unwrap();
-}
-
 pub unsafe fn hack_loop(
     process: &mut Win32Process<impl VirtualMemory>,
     client_base: Address, 
@@ -102,7 +80,7 @@ pub unsafe fn hack_loop(
             return true;
         }
 
-        if config.glow_enable || config.aimbot_enable || config.radar_enable || config.chams_enable || config.recoil_control_enable {
+        if config.glow_enable || config.aimbot_enable {
             let local_team = sdk::get_team(process, &offsets, local_base);
             let local_wep_def_index = sdk::get_wep_def_index(process, offsets, client_base, local_base);
             let mut best_target = usize::MAX;
@@ -126,6 +104,7 @@ pub unsafe fn hack_loop(
                         }
                         
                         if config.aimbot_enable && sdk::is_valid_weapon(local_wep_def_index) {
+
                             if config.rage_mode {
                                 let aim_angles = sdk::get_aim_angles(process, &offsets, entity_base, local_base, 8);
                                 let yaw_diff = libm::fabsf(view_angles.y - aim_angles.y);
@@ -157,97 +136,68 @@ pub unsafe fn hack_loop(
                             let entity_glowindex = sdk::get_glowindex(process, &offsets, entity_base);
                             glow(process, glow_object, entity_glowindex);
                         }
-
-                        if config.chams_enable {
-                            chams(process, entity_base, 0x17, 0xB1, 0xFF);
-                        } else {
-                            chams(process, entity_base, 0xFF, 0xFF, 0xFF);
-                        }
                     }
                 }
             }
 
-            if config.chams_enable {
-                chams_patch_model_ambient(process, offsets, engine_base, (config.chams_brightness / 100.0) * 255.0);
-            } else {
-                chams_patch_model_ambient(process, offsets, engine_base, 0.0);
-            }
+            if best_target != usize::MAX {
+                if keyboard_state.is_down(0x01) {
+                    let entity_base = sdk::get_entity_by_index(process, offsets, client_base, best_target);
+                    let spotted_mask = sdk::get_spottedmask(process, offsets, entity_base);
 
-            if keyboard_state.is_down(0x01) && sdk::is_valid_weapon(local_wep_def_index) {
-                let shots_fired = sdk::get_shots_fired(process, offsets, local_base);
+                    if config.rage_mode {
+                        let aimpunch = sdk::get_aimpunch(process, offsets, local_base);
 
-                if shots_fired >= 1 {
-                    let aimpunch = sdk::get_aimpunch(process, offsets, local_base);
-                    let factor = config.recoil_control_amount / 100.0;
+                        view_angles.x = target_angles.x;
+                        view_angles.y = target_angles.y;
+                        view_angles.x -= aimpunch.x*2.0;
+                        view_angles.y -= aimpunch.y*2.0;
 
-                    if config.recoil_control_enable && !config.rage_mode {
-                        view_angles.x = view_angles.x + PREVIOUS_PUNCH_X - ((aimpunch.x*2.0) * factor);    
-                        view_angles.y = view_angles.y + PREVIOUS_PUNCH_Y - ((aimpunch.y*2.0) * factor);
-                    }
+                        sdk::math::vector_normalise(&mut view_angles);
+                        sdk::set_viewangles(process, offsets, client_state, &view_angles);
+                    } else {
+                        if spotted_mask != 0 {
+                            if (spotted_mask & (1i32 << local_id)) > 0 {
     
-                    PREVIOUS_PUNCH_X = (aimpunch.x*2.0) * factor;
-                    PREVIOUS_PUNCH_Y = (aimpunch.y*2.0) * factor;
-
-                    if best_target != usize::MAX {
-                        let entity_base = sdk::get_entity_by_index(process, offsets, client_base, best_target);
-                        let spotted_mask = sdk::get_spottedmask(process, offsets, entity_base);
+                                let entity_pos = sdk::get_pos(process, offsets, entity_base);
+                                let local_pos = sdk::get_pos(process, offsets, local_base);
     
-                        if config.rage_mode {
-                            let aimpunch = sdk::get_aimpunch(process, offsets, local_base);
+                                let mut diff = sdk::Vector3{x: target_angles.x - view_angles.x, y: target_angles.y - view_angles.y, z: target_angles.z - view_angles.z };
+                                let player_distance = libm::sqrtf((local_pos.x-entity_pos.x)*(local_pos.x-entity_pos.x)
+                                                                    + (local_pos.y-entity_pos.y)*(local_pos.y-entity_pos.y)
+                                                                    + (local_pos.z-entity_pos.z)*(local_pos.z-entity_pos.z));
     
-                            view_angles.x = target_angles.x;
-                            view_angles.y = target_angles.y;
-                            view_angles.x -= aimpunch.x*2.0;
-                            view_angles.y -= aimpunch.y*2.0;
-
-                            sdk::math::vector_normalise(&mut view_angles);
-                            sdk::set_viewangles(process, offsets, client_state, &view_angles);
+                                let yaw_diff = libm::sinf(libm::fabsf(diff.y).to_radians()) * player_distance;
+                                let pitch_diff = libm::sinf(libm::fabsf(diff.x).to_radians()) * player_distance;
     
-                        } else {
-                            if spotted_mask != 0 {
-                                if (spotted_mask & (1i32 << local_id)) > 0 {
-        
-                                    let entity_pos = sdk::get_pos(process, offsets, entity_base);
-                                    let local_pos = sdk::get_pos(process, offsets, local_base);
-        
-                                    let diff = sdk::Vector3{x: target_angles.x - view_angles.x, y: target_angles.y - view_angles.y, z: target_angles.z - view_angles.z };
+                                let dist = libm::sqrtf(pitch_diff * pitch_diff + yaw_diff * yaw_diff);
     
-                                    let player_distance = libm::sqrtf((local_pos.x-entity_pos.x)*(local_pos.x-entity_pos.x)
-                                                                        + (local_pos.y-entity_pos.y)*(local_pos.y-entity_pos.y)
-                                                                        + (local_pos.z-entity_pos.z)*(local_pos.z-entity_pos.z));
-        
+                                if dist < config.aimbot_fov && dist > -config.aimbot_fov {
     
-                                    let yaw_diff = libm::sinf(libm::fabsf(diff.y).to_radians()) * player_distance;
-                                    let pitch_diff = libm::sinf(libm::fabsf(diff.x).to_radians()) * player_distance;
-        
-                                    let dist = libm::sqrtf(pitch_diff * pitch_diff + yaw_diff * yaw_diff);
-        
-                                    if dist < config.aimbot_fov && dist > -config.aimbot_fov {
-                                        
-                                        if config.aimbot_smoothing != 0.0 {
-                                            view_angles.x += diff.x / (25.0 * (1.0 + config.aimbot_smoothing));
-                                            view_angles.y += diff.y / (25.0 * (1.0 + config.aimbot_smoothing));
-                                        } else {
-                                            view_angles.x += diff.x;
-                                            view_angles.y += diff.y;
-                                        }
-
-                                        sdk::math::vector_normalise(&mut view_angles);
-                                        sdk::set_viewangles(process, offsets, client_state, &view_angles);
+                                    if config.recoil_control_enable {
+                                        let aimpunch = sdk::get_aimpunch(process, offsets, local_base);
+                                        diff.x -= (aimpunch.x*2.0) * (config.recoil_control_amount / 100.0);
+                                        diff.y -= (aimpunch.y*2.0) * (config.recoil_control_amount / 100.0);
                                     }
+                                    
+                                    if config.aimbot_smoothing != 0.0 {
+                                        view_angles.x += diff.x / (25.0 * (1.0 + config.aimbot_smoothing));
+                                        view_angles.y += diff.y / (25.0 * (1.0 + config.aimbot_smoothing));
+                                    } else {
+                                        view_angles.x += diff.x;
+                                        view_angles.y += diff.y;
+                                    }
+        
+                                    sdk::math::vector_normalise(&mut view_angles);
+                                    sdk::set_viewangles(process, offsets, client_state, &view_angles);
                                 }
                             }
                         }
-                    } else {
-                        sdk::math::vector_normalise(&mut view_angles);
-                        sdk::set_viewangles(process, offsets, client_state, &view_angles);
                     }
-                } else {
-                    PREVIOUS_PUNCH_X = 0.0;
-                    PREVIOUS_PUNCH_Y = 0.0;
                 }
             }
         }
+
         return true;
     }
 }
