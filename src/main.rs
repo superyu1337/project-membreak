@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     loop {
         unsafe { 
             let cfg = CONFIG.clone();
-            let new_cfg = rx.recv_timeout(std::time::Duration::from_nanos(500));
+            let new_cfg = rx.recv_timeout(std::time::Duration::from_micros(500));
 
             if new_cfg.is_ok() {
                 let new_cfg = new_cfg.unwrap();
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        thread::sleep(std::time::Duration::from_nanos(500));
+        thread::sleep(std::time::Duration::from_micros(500));
     }
 
     menu_thread.join().unwrap();
